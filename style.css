@@ -1,0 +1,18 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+.state {
+    fill: lightgreen;
+    stroke: black;
+    stroke-width: 2;
+}
+.transition {
+    stroke: black;
+    stroke-width: 2;
+    marker-end: url(#arrowhead);
+}
+text {
+    font-size: 14px;
+    fill: black;
+}

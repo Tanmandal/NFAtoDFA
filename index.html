@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DFA Diagram</title>
+    <style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #111727;
+  margin: 0; 
+}
+h1 {
+  color: lightblue;
+  font-size: 2em;
+  margin-bottom: 71px;
+}
+#dfa-diagram {
+  width: 100%; 
+  height: auto; 
+  max-width: 800px;
+  background: white;
+}
+.button {
+  position: absolute;
+  top: 20px; 
+  right: 20px;
+  width: 150px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border: 1px solid #17795E;
+  background-color: #209978;
+  overflow: hidden;
+}
+
+.button, .button__icon, .button__text {
+  transition: all 0.3s;
+}
+
+.button .button__text {
+  transform: translateX(22px);
+  color: #fff;
+  font-weight: 600;
+}
+
+.button .button__icon {
+  position: absolute;
+  transform: translateX(109px);
+  height: 100%;
+  width: 39px;
+  background-color: #17795E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button .svg {
+  width: 20px;
+  fill: #fff;
+}
+
+.button:hover {
+  background: #17795E;
+}
+
+.button:hover .button__text {
+  color: transparent;
+}
+
+.button:hover .button__icon {
+  width: 148px;
+  transform: translateX(0);
+}
+
+.button:active .button__icon {
+  background-color: #146c54;
+}
+
+.button:active {
+  border: 1px solid #146c54;
+}
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5em; 
+  }
+}
+    </style>
+  </head>
+  <body>
+    <h1>Simple DFA Diagram</h1> 
+    <button class="button" type="button">
+      <span class="button__text">Download</span>
+      <span class="button__icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35" id="bdd05811-e15d-428c-bb53-8661459f9307" data-name="Layer 2" class="svg"><path d="M17.5,22.131a1.249,1.249,0,0,1-1.25-1.25V2.187a1.25,1.25,0,0,1,2.5,0V20.881A1.25,1.25,0,0,1,17.5,22.131Z"></path><path d="M17.5,22.693a3.189,3.189,0,0,1-2.262-.936L8.487,15.006a1.249,1.249,0,0,1,1.767-1.767l6.751,6.751a.7.7,0,0,0,.99,0l6.751-6.751a1.25,1.25,0,0,1,1.768,1.767l-6.752,6.751A3.191,3.191,0,0,1,17.5,22.693Z"></path><path d="M31.436,34.063H3.564A3.318,3.318,0,0,1,.25,30.749V22.011a1.25,1.25,0,0,1,2.5,0v8.738a.815.815,0,0,0,.814.814H31.436a.815.815,0,0,0,.814-.814V22.011a1.25,1.25,0,1,1,2.5,0v8.738A3.318,3.318,0,0,1,31.436,34.063Z"></path></svg></span>
+    </button>
+    <svg id="dfa-diagram" width="800" height="600"></svg>
+
+    <script>
+      function parseDfaTable(data) {
+        const lines = data.trim().split("\n");
+        let initialState = null;
+        const finalStates = new Set();
+
+        const transitions = lines.map((line) => {
+          let [state, input, nextState] = line
+            .split("|")
+            .map((item) => item.replace(/[()]/g, "").trim());
+
+          if (state.startsWith(">*")) {
+            state = state.replace(">*", "").trim();
+            initialState = state;
+            finalStates.add(state);
+          } else if (state.startsWith(">")) {
+            state = state.replace(">", "").trim();
+            initialState = state;
+          } else if (state.startsWith("*")) {
+            state = state.replace("*", "").trim();
+            finalStates.add(state);
+          }
+
+          if (nextState.startsWith("*")) {
+            nextState = nextState.replace("*", "").trim();
+            finalStates.add(nextState);
+          }
+
+          return { state, input, nextState };
+        });
+
+        return { transitions, initialState, finalStates };
+      }
+
+      function getUniqueStates(transitions) {
+        const states = new Set();
+
+        transitions.forEach(({ state, nextState }) => {
+          states.add(state);
+          states.add(nextState);
+        });
+
+        return Array.from(states);
+      }
+
+      function calculateStatePositions(states) {
+        const radius = 200;
+        const centerX = 400;
+        const centerY = 300;
+
+        const stateCount = states.length;
+        const statePositions = {};
+
+        states.forEach((state, index) => {
+          const angle = (index / stateCount) * 2 * Math.PI;
+          const x = centerX + radius * Math.cos(angle);
+          const y = centerY + radius * Math.sin(angle);
+
+          statePositions[state] = { x, y };
+        });
+
+        return statePositions;
+      }
+
+      function getRandomColor() {
+        const letters = "0123456789ABCDEF";
+        let color = "#";
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
+
+      function drawDfa({ transitions, initialState, finalStates }) {
+        const svg = document.getElementById("dfa-diagram");
+        const uniqueStates = getUniqueStates(transitions);
+        const statePositions = calculateStatePositions(uniqueStates);
+        const defs = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "defs"
+        );
+
+        const marker = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "marker"
+        );
+        marker.setAttribute("id", "arrowhead");
+        marker.setAttribute("markerWidth", "10");
+        marker.setAttribute("markerHeight", "7");
+        marker.setAttribute("refX", "10");
+        marker.setAttribute("refY", "3.5");
+        marker.setAttribute("orient", "auto");
+        const arrow = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "polygon"
+        );
+        arrow.setAttribute("points", "0 0, 10 3.5, 0 7");
+        arrow.setAttribute("fill", "black");
+        marker.appendChild(arrow);
+        defs.appendChild(marker);
+        svg.appendChild(defs);
+
+        const circleRadius = 40;
+        Object.keys(statePositions).forEach((state) => {
+          let isInitial = state === initialState;
+          let isFinal = finalStates.has(state);
+          const { x, y } = statePositions[state];
+
+          const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle"
+          );
+          circle.setAttribute("fill", "lightgreen");
+          circle.setAttribute("cx", x);
+          circle.setAttribute("cy", y);
+          circle.setAttribute("r", circleRadius);
+          circle.setAttribute("stroke", "black");
+          circle.setAttribute("stroke-width", "2");
+
+          svg.appendChild(circle);
+
+          if (isFinal) {
+            const outerCircle = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "circle"
+            );
+            outerCircle.setAttribute("cx", x);
+            outerCircle.setAttribute("cy", y);
+            outerCircle.setAttribute("r", circleRadius + 5);
+            outerCircle.setAttribute("fill", "none");
+            outerCircle.setAttribute("stroke", "black");
+            outerCircle.setAttribute("stroke-width", "2");
+            svg.appendChild(outerCircle);
+          }
+
+          const text = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "text"
+          );
+          text.setAttribute("x", x);
+          text.setAttribute("y", y + 5);
+          text.setAttribute("text-anchor", "middle");
+          text.textContent = state;
+          svg.appendChild(text);
+
+          if (isInitial) {
+            const offset = 60;
+            const initialLine = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "line"
+            );
+            initialLine.setAttribute("x1", x + circleRadius + offset);
+            initialLine.setAttribute("y1", y);
+            initialLine.setAttribute("x2", x + circleRadius);
+            initialLine.setAttribute("y2", y);
+            initialLine.setAttribute("stroke", "black");
+            initialLine.setAttribute("stroke-width", "2");
+            initialLine.setAttribute("marker-end", "url(#arrowhead)");
+            svg.appendChild(initialLine);
+          }
+        });
+
+        const processedTransitions = new Set();
+        const groupedTransitions = {};
+        transitions.forEach(({ state, input, nextState }) => {
+          const key = `${state}-${nextState}`;
+          if (!groupedTransitions[key]) {
+            groupedTransitions[key] = [];
+          }
+          groupedTransitions[key].push(input);
+        });
+
+        Object.keys(groupedTransitions).forEach((key) => {
+          const [state, nextState] = key.split("-");
+          const start = statePositions[state];
+          const end = statePositions[nextState];
+          const transitionColor = getRandomColor();
+          const isReverseTransition =
+            state !== nextState &&
+            processedTransitions.has(`${nextState}-${state}`);
+
+          if (isReverseTransition) {
+            const inputs = groupedTransitions[key].join(", ");
+            const startX = start.x + circleRadius;
+            const startY = start.y;
+            const endX = end.x - circleRadius;
+            const endY = end.y;
+            const controlPointX = (startX + endX) / 2 + 50;
+            const controlPointY = (startY + endY) / 2 + 40;
+
+            const line = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "path"
+            );
+            const d = `M ${startX},${startY} Q ${controlPointX},${controlPointY} ${endX},${endY}`;
+            line.setAttribute("d", d);
+            line.setAttribute("fill", "none");
+            line.setAttribute("stroke", transitionColor);
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("marker-end", "url(#arrowhead)");
+            svg.appendChild(line);
+
+            const labelX = (startX + endX) / 2;
+            const labelY = controlPointY - 10;
+            const label = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "text"
+            );
+            label.setAttribute("x", labelX);
+            label.setAttribute("y", labelY);
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("font-size", "20");
+            label.setAttribute("fill", transitionColor);
+            label.textContent = groupedTransitions[key].join(", ");
+            svg.appendChild(label);
+          } else {
+            if (state === nextState) {
+              const inputs = groupedTransitions[key].join(", ");
+              const selfLoopPath = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "path"
+              );
+
+              const loopOffsetX = 50;
+              const loopOffsetY = 80;
+              const startX = start.x + 40;
+              const startY = start.y - circleRadius + 30;
+              const controlPointX = start.x + loopOffsetX;
+              const controlPointY = start.y - loopOffsetY;
+
+              const endX = start.x;
+              const endY = start.y - circleRadius;
+              const d = `M ${startX},${startY} Q ${controlPointX},${controlPointY} ${endX},${endY}`;
+
+              selfLoopPath.setAttribute("d", d);
+              selfLoopPath.setAttribute("fill", "none");
+              selfLoopPath.setAttribute("stroke", transitionColor);
+              selfLoopPath.setAttribute("stroke-width", "2");
+              selfLoopPath.setAttribute("marker-end", "url(#arrowhead)");
+              svg.appendChild(selfLoopPath);
+
+              const labelX = startX + loopOffsetX / 2 - 10;
+              const labelY = startY - loopOffsetY / 2 + 5;
+              const label = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "text"
+              );
+              label.setAttribute("x", labelX);
+              label.setAttribute("y", labelY);
+              label.setAttribute("text-anchor", "middle");
+              label.setAttribute("font-size", "16");
+              label.setAttribute("fill", transitionColor);
+              label.textContent = inputs;
+              svg.appendChild(label);
+            } else {
+              const dx = end.x - start.x;
+              const dy = end.y - start.y;
+              const angle = Math.atan2(dy, dx);
+              const startX = start.x + circleRadius * Math.cos(angle);
+              const startY = start.y + circleRadius * Math.sin(angle);
+              const endX = end.x - circleRadius * Math.cos(angle);
+              const endY = end.y - circleRadius * Math.sin(angle);
+
+              const line = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "path"
+              );
+              line.setAttribute("class", "transition");
+
+              // Draw the transition line
+              const d = `M ${startX},${startY} L ${endX},${endY}`;
+              line.setAttribute("d", d);
+              line.setAttribute("fill", "none");
+              line.setAttribute("stroke", transitionColor);
+              line.setAttribute("stroke-width", "2");
+              line.setAttribute("marker-end", "url(#arrowhead)");
+              svg.appendChild(line);
+
+              // Add transition label
+              const midX = (startX + endX) / 2;
+              const midY = (startY + endY) / 2;
+              const label = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "text"
+              );
+              label.setAttribute("x", midX);
+              label.setAttribute("y", midY - 5);
+              label.setAttribute("text-anchor", "middle");
+              label.setAttribute("font-size", "20");
+              label.setAttribute("fill", transitionColor);
+              label.textContent = groupedTransitions[key].join(", "); 
+              svg.appendChild(label);
+            }
+          }
+
+          processedTransitions.add(key);
+        });
+      }
+      function downloadAsJPEG() {
+        const svg = document.getElementById("dfa-diagram");
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svg);
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const svgSize = svg.getBoundingClientRect();
+        canvas.width = svgSize.width;
+        canvas.height = svgSize.height;
+        ctx.fillStyle = "white"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the rectangle
+
+        const img = new Image();
+        const blob = new Blob([svgString], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+
+        img.onload = function () {
+          ctx.drawImage(img, 0, 0);
+          const jpegUrl = canvas.toDataURL("image/jpeg");
+          const link = document.createElement("a");
+          link.href = jpegUrl;
+          link.download = "dfa_diagram.jpg";
+          link.click();
+          URL.revokeObjectURL(url);
+        };
+
+        img.src = url;
+      }
+      document
+        .querySelector(".button")
+        .addEventListener("click", downloadAsJPEG);
+
+      fetch("transfer.txt")
+        .then((response) => response.text())
+        .then((data) => {
+          const transitions = parseDfaTable(data);
+          drawDfa(transitions);
+        })
+        .catch((error) =>
+          console.error("Error fetching DFA transition table:", error)
+        );
+    </script>
+  </body>
+</html>

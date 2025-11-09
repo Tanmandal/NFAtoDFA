@@ -1,17 +1,53 @@
-# NFAtoDFA
-*Non-Deterministic to Deterministic Finite Automata Converter*
+# NFA → DFA Converter & Visualizer
 
-It is a hobby project that I developed with one of my friends while studing AFL in BTech 2nd Year.
+Convert any **NFA (or λ-NFA)** to a **DFA** and visualize it interactively using Python and PyWebView.
 
-This project has two flavours:
-* Full Version : Needs no Dependencies
-* light Version : Needs a Modern Web Browser to be present 
+---
 
-This project converts a Non-Deterministic Finite Automata to Deterministic Finite Automata and also gives option to view the final DFA Diagram.
+## 🚀 Features
 
-**Tutorial :**
-![enter image description here](https://github.com/Tanmandal/ScreenShots/blob/main/NFAtoDFATutorial.gif)
+* NFA → DFA conversion (with λ-support)
+* Rich CLI interface
+* Interactive DFA visualization in browser window
+* Download DFA diagram as JPEG
+* Built with **PyWebView**, **Rich**, and **Nuitka**
 
-**Installation :**
+---
 
-It is a portable application , requiring no installation. Just download the NFAtoDFA.zip or NFAtoDFAx.zip from resources as per requirement. Extract the zip files and run the corresponding exe files inside them.
+## ⚙️ Installation
+
+```bash
+git clone https://github.com/tanmandal/NFAtoDFA.git
+cd NFAtoDFA
+pip install -r requirements.txt
+```
+
+---
+
+## 🧠 Usage
+
+```bash
+python NFAtoDFA.py
+```
+
+Follow the CLI prompts to enter:
+
+* States and transitions
+* Initial and final states
+* (Optional) λ-transitions
+
+Choose to visualize → opens DFA diagram window with download option.
+
+---
+
+## 🆕 Updates
+
+* Migrated from **Electron → PyWebView**
+* Switched **PyInstaller → Nuitka**
+* Improved CLI with **Rich**
+
+---
+
+## 📜 License
+
+MIT License © 2024

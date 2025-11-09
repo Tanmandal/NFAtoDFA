@@ -1,16 +1,83 @@
 from stringtokenizer import StringTokenizer
+from rich.console import Console
+from rich.prompt import Prompt, Confirm
+from rich.table import Table
+from rich.text import Text
+from rich.panel import Panel
+import base64
 import os
+import webview
+import logging
+import sys
+
+console = Console()
+
+class Bridge:
+    def get_transfer_data(self):
+        if os.path.exists("transfer.txt"):
+            with open("transfer.txt", "r", encoding="utf-8") as f:
+                return f.read()
+        return "No transfer.txt file found."
+    def save_image(self, img_data):
+        # Extract Base64 content (after the comma)
+        encoded = img_data.split(",")[1]
+        image_bytes = base64.b64decode(encoded)
+
+        window = webview.active_window()
+        save_path = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            save_filename="dfa_diagram.jpg"
+        )
+
+        if save_path:
+            save_path = save_path[0]
+            with open(save_path, "wb") as f:
+                f.write(image_bytes)
+            return "Image saved successfully!"
+        return "Save canceled."
+
+def display():
+    # 🧩 Suppress Bottle and pywebview logs
+    logging.getLogger('pywebview').setLevel(logging.ERROR)
+    logging.getLogger('bottle').setLevel(logging.ERROR)
+
+    # Redirect stdout/stderr temporarily to silence connection logs
+    class DevNull:
+        def write(self, _): pass
+        def flush(self): pass
+
+    sys.stdout = DevNull()
+    sys.stderr = DevNull()
+
+    try:
+        html_path = os.path.abspath("index.html")
+        if not os.path.exists(html_path):
+            console.print("[bold red]Error Loading Webview[/bold red]")
+            return
+        bridge = Bridge()
+        window = webview.create_window("DFA Visualizer", html_path, js_api=bridge)
+        def on_loaded():
+            window.maximize()
+        webview.start(on_loaded, debug=False)
+    finally:
+        # Restore stdout/stderr
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+
+
 def merge(l1,l2):
     for i in l2:
         if i not in l1:
             l1.append(i)
     l1.sort()
+
 def Eclosure(st,lmdtrns,Eclsr):
     if st in Eclsr:
         return
     Eclsr.append(st)
     for i in lmdtrns[st]:
         Eclosure(i,lmdtrns,Eclsr)
+
 def Eclsrtbl(lmdtrns):
     Ectbl=[]
     for i in range(len(lmdtrns)):
@@ -19,13 +86,10 @@ def Eclsrtbl(lmdtrns):
         Eclsr.sort()
         Ectbl.append(Eclsr)
     return Ectbl
+
 def LNFAtoNFA(Ntbl,lmdtrns):
     Ectbl=Eclsrtbl(lmdtrns)
-    UNtbl=[]
-    for i in range(len(Ntbl)):
-        UNtbl.append([])
-        for j in range(len(Ntbl[i])):
-            UNtbl[i].append([])
+    UNtbl=[ [ [] for _ in row ] for row in Ntbl]
     for i in range(len(Ectbl)):
         for j in Ectbl[i]:
             for k in range(len(Ntbl[j])):
@@ -37,6 +101,7 @@ def LNFAtoNFA(Ntbl,lmdtrns):
                 merge(l,Ectbl[k])
             UNtbl[i][j]=l
     return UNtbl
+
 def NFAtoDFA(Nsts,Ntbl,Dsts,Dtbl,lmdtrns=[]):
     ns=len(Ntbl[0])
     x=Nsts[0]
@@ -51,9 +116,7 @@ def NFAtoDFA(Nsts,Ntbl,Dsts,Dtbl,lmdtrns=[]):
             Dsts.append(i)
     k=1
     while k<len(Dsts):
-        Dtbl.append([])
-        for w in range(ns):
-            Dtbl[k].append([])
+        Dtbl.append([[] for _ in range(ns)])
         for w in range(ns):
             for i in Dsts[k]:
                 merge(Dtbl[k][w],Ntbl[i][w])
@@ -61,40 +124,38 @@ def NFAtoDFA(Nsts,Ntbl,Dsts,Dtbl,lmdtrns=[]):
             if i not in Dsts:
                 Dsts.append(i)
         k+=1
+
 def stateDisp(stnm,stno):
-    s=""
-    for i in stno:
-        if(len(s)>0):
-            s+=","
-        s+=stnm[i]
-    if len(s)==0:
-        s="Φ"
-    return s
+    if not stno:
+        return "Φ"
+    return ",".join(stnm[i] for i in stno)
+
 def isFinal(sts,fst):
-    for i in sts:
-        for j in fst:
-            if i==j:
-                return True
-    return False
+    return any(i in fst for i in sts)
+
 def dispTbl(trns,stsnm,sts,tbl,fst,lmdtrns=[]):
-    buf=15
-    print(' '*buf,end='')
+    table = Table(title="Transition Table", show_lines=True)
+    table.add_column("State", justify="center", style="bold cyan")
     if len(lmdtrns)>0:
-        print("λ".ljust(buf),end='')
+        table.add_column("λ", justify="center", style="bold yellow")
     for i in trns:
-        print(i.ljust(buf),end='')
-    print('\n')
-    for i in range(len(sts)):
-        if(i==0):
-            print('> ',end='')
-        if isFinal(sts[i],fst):
-            print('* ',end='')
-        print(stateDisp(stsnm,sts[i]).ljust(buf),end='')
+        table.add_column(i, justify="center", style="green")
+
+    for idx, state in enumerate(sts):
+        row = []
+        marker = ""
+        if idx == 0:
+            marker += "➤ "
+        if isFinal(state, fst):
+            marker += "* "
+        row.append(marker + stateDisp(stsnm, state))
         if len(lmdtrns)>0:
-            print(stateDisp(stsnm,lmdtrns[i]).ljust(buf),end='')
-        for j in range(len(tbl[i])):
-            print(stateDisp(stsnm,tbl[i][j]).ljust(buf),end='')
-        print("\n")
+            row.append(stateDisp(stsnm, lmdtrns[idx]))
+        for j in range(len(tbl[idx])):
+            row.append(stateDisp(stsnm, tbl[idx][j]))
+        table.add_row(*row)
+    console.print(table)
+
 def genFile(trns,stsnm,sts,tbl,fst):
     k=""
     for i in range(len(sts)):
@@ -104,36 +165,41 @@ def genFile(trns,stsnm,sts,tbl,fst):
         if i==0:
             s='>'+s
         for j in range(len(tbl[i])):
-            k=k+s+"|"+trns[j]+"|("+stateDisp(stsnm,tbl[i][j])+")\n"
-    f=open("Display/resources/app/transfer.txt",'w',encoding='utf-8')
-    f.write(k)
+            k+=f"{s}|{trns[j]}|({stateDisp(stsnm,tbl[i][j])})\n"
+    with open("transfer.txt",'w',encoding='utf-8') as f:
+        f.write(k)
+
+
+
+
+console.print(Panel("[bold blue]NFA → DFA Converter with λ-NFA Support[/bold blue]", expand=False))
 
 Nsts=[]
 Nstsnm=[]
-nl=int(input("Number of States in NFA Table : "))
-print("Name NFA States : " )
+nl=int(Prompt.ask("[yellow]Number of States in NFA Table[/yellow]"))
+console.print("[cyan]Name NFA States:[/cyan]")
 for i in range(nl):
-    s=""
     while True:
-        s=input(str(i+1)+". ")
-        if(s in Nstsnm):
-            print("Same Name of State Used Again. Please Re-Enter\n")
+        s=Prompt.ask(f"[{i+1}] State Name")
+        if s in Nstsnm:
+            console.print("[red]Duplicate state name. Try again.[/red]")
         else:
             break
     Nsts.append([i])
     Nstsnm.append(s)
-ini=""
+
 while True:
-    ini=input("Enter Initial State : ")
+    ini=Prompt.ask("[green]Enter Initial State[/green]")
     if ini not in Nstsnm:
-        print("Invalid Initial State. Please Enter Again")
+        console.print("[red]Invalid initial state.[/red]")
     else:
         break
 Nstsnm.remove(ini)
 Nstsnm.insert(0,ini)
+
 fst=[]
 while True:
-    fx=input("Enter Final States : ")
+    fx=Prompt.ask("[green]Enter Final States (comma separated)[/green]")
     st=StringTokenizer(fx,',')
     br=True
     while st.hasMoreTokens():
@@ -147,75 +213,75 @@ while True:
         break
     else:
         fst=[]
-        print("Invalid Final States. Please Enter Again")
-nt=int(input("Number of Transitions in NFA Table : "))
+        console.print("[red]Invalid final states. Please re-enter.[/red]")
+
+nt=int(Prompt.ask("[yellow]Number of Transitions in NFA Table[/yellow]"))
 Ntrns=[]
-print("Name NFA Transitions : " )
+console.print("[cyan]Name NFA Transitions:[/cyan]")
 for i in range(nt):
-    s=""
     while True:
-        s=input(str(i+1)+". ")
-        if(s in Ntrns):
-            print("Same Transition Entered Again. Please Re-Enter\n")
+        s=Prompt.ask(f"[{i+1}] Transition symbol")
+        if s in Ntrns:
+            console.print("[red]Duplicate transition. Try again.[/red]")
         else:
             break
     Ntrns.append(s)
+
 Ntbl=[]
 for i in range(nl):
     Ntbl.append([])
-    j=0
-    while j<nt:
-        if j==len(Ntbl[i]):
-            Ntbl[i].append([])
-        s=input("ζ("+Nstsnm[i]+","+Ntrns[j]+")=> ")
+    for j in range(nt):
+        s=Prompt.ask(f"ζ({Nstsnm[i]},{Ntrns[j]}) => [dim]comma separated[/dim]")
         st=StringTokenizer(s,",")
+        lst=[]
         while(st.hasMoreTokens()):
             ss=st.nextToken()
             if ss not in Nstsnm and len(ss)>0:
-                print("Invalid Transition States . Please Re-Enter")
-                j-=1
+                console.print("[red]Invalid state in transition![/red]")
+                lst=[]
                 break
             else:
-                if Nstsnm.index(ss) not in Ntbl[i][j]:
-                    Ntbl[i][j].append(Nstsnm.index(ss))
-            Ntbl[i][j].sort()
-        j+=1
-ch="N"+(input("Enter Y for λ-NFA : "))
-ch=ch[-1]
-lmdtrns=[]
-if(ch=='Y' or ch=='y'):
-    i=0
-    while i<(len(Nstsnm)):
-        s=input("ζ("+Nstsnm[i]+",λ)=> ")
+                if len(ss)>0 and Nstsnm.index(ss) not in lst:
+                    lst.append(Nstsnm.index(ss))
+        lst.sort()
+        Ntbl[i].append(lst)
+
+if Confirm.ask("[magenta]Is this a λ-NFA?[/magenta]"):
+    lmdtrns=[]
+    for i in range(len(Nstsnm)):
+        s=Prompt.ask(f"ζ({Nstsnm[i]},λ) => [dim]comma separated[/dim]")
         st=StringTokenizer(s,",")
-        if i==len(lmdtrns):
-            lmdtrns.append([])
+        lmd=[]
         while(st.hasMoreTokens()):
             ss=st.nextToken()
             if ss not in Nstsnm and len(ss)>0:
-                print("Invalid Transition States . Please Re-Enter")
-                i-=1
+                console.print("[red]Invalid λ transition![/red]")
+                lmd=[]
+                break
             else:
-                if Nstsnm.index(ss) not in lmdtrns[i]:
-                    lmdtrns[i].append(Nstsnm.index(ss))
-        i+=1
-    print("λ-NFA : ")
+                if len(ss)>0 and Nstsnm.index(ss) not in lmd:
+                    lmd.append(Nstsnm.index(ss))
+        lmdtrns.append(lmd)
+    console.print("\n[bold yellow]λ-NFA Transition Table:[/bold yellow]")
     dispTbl(Ntrns,Nstsnm,Nsts,Ntbl,fst,lmdtrns)
     Ntbl=LNFAtoNFA(Ntbl,lmdtrns)
-print("NFA : ")
+else:
+    lmdtrns=[]
+
+console.print("\n[bold cyan]NFA Transition Table:[/bold cyan]")
 dispTbl(Ntrns,Nstsnm,Nsts,Ntbl,fst)
+
 Dsts=[]
 Dtbl=[]
-NFAtoDFA(Nsts,Ntbl,Dsts,Dtbl,lmdtrns);
-print("DFA : ")
+NFAtoDFA(Nsts,Ntbl,Dsts,Dtbl,lmdtrns)
+console.print("\n[bold green]Equivalent DFA Transition Table:[/bold green]")
 dispTbl(Ntrns,Nstsnm,Dsts,Dtbl,fst)
 
-ch="N"+(input("Enter Y to See DFA diagram : "))
-ch=ch[-1]
-
-if ch=='y' or ch=='Y':
+if Confirm.ask("[yellow]Do you want to visualize DFA diagram?[/yellow]"):
     genFile(Ntrns,Nstsnm,Dsts,Dtbl,fst)
-    os.system('Display\\display.exe')
-if(os.path.exists('Display\\resources\\app\\transfer.txt')):
-    os.remove('Display\\resources\\app\\transfer.txt')
-input("Press Enter to Exit")
+    display()
+
+if os.path.exists('transfer.txt'):
+    os.remove('transfer.txt')
+
+console.input("[bold cyan]Press Enter to Exit...[/bold cyan]")

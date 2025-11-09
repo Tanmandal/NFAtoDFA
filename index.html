@@ -395,49 +395,64 @@ h1 {
           processedTransitions.add(key);
         });
       }
-      function downloadAsJPEG() {
-        const svg = document.getElementById("dfa-diagram");
-        const serializer = new XMLSerializer();
-        const svgString = serializer.serializeToString(svg);
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const svgSize = svg.getBoundingClientRect();
-        canvas.width = svgSize.width;
-        canvas.height = svgSize.height;
-        ctx.fillStyle = "white"; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the rectangle
+      async function downloadAsJPEG() {
+		  const svg = document.getElementById("dfa-diagram");
+		  const serializer = new XMLSerializer();
+		  const svgString = serializer.serializeToString(svg);
+		  const canvas = document.createElement("canvas");
+		  const ctx = canvas.getContext("2d");
+		  const svgSize = svg.getBoundingClientRect();
+		  canvas.width = svgSize.width;
+		  canvas.height = svgSize.height;
+		  ctx.fillStyle = "white";
+		  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const img = new Image();
-        const blob = new Blob([svgString], {
-          type: "image/svg+xml;charset=utf-8",
-        });
-        const url = URL.createObjectURL(blob);
+		  const img = new Image();
+		  const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+		  const url = URL.createObjectURL(blob);
 
-        img.onload = function () {
-          ctx.drawImage(img, 0, 0);
-          const jpegUrl = canvas.toDataURL("image/jpeg");
-          const link = document.createElement("a");
-          link.href = jpegUrl;
-          link.download = "dfa_diagram.jpg";
-          link.click();
-          URL.revokeObjectURL(url);
-        };
+		  img.onload = async function () {
+			ctx.drawImage(img, 0, 0);
+			const jpegData = canvas.toDataURL("image/jpeg");
 
-        img.src = url;
-      }
-      document
-        .querySelector(".button")
-        .addEventListener("click", downloadAsJPEG);
+			if (window.pywebview) {
+			  // ✅ send base64 to Python backend to handle save
+			  await window.pywebview.api.save_image(jpegData);
+			} else {
+			  // ✅ fallback for browser
+			  const link = document.createElement("a");
+			  link.href = jpegData;
+			  link.download = "dfa_diagram.jpg";
+			  link.click();
+			}
 
-      fetch("transfer.txt")
-        .then((response) => response.text())
-        .then((data) => {
-          const transitions = parseDfaTable(data);
-          drawDfa(transitions);
-        })
-        .catch((error) =>
-          console.error("Error fetching DFA transition table:", error)
-        );
+			URL.revokeObjectURL(url);
+		  };
+
+		  img.src = url;
+		}
+		document.querySelector(".button").addEventListener("click", downloadAsJPEG);
+
+
+      async function loadTransferData() {
+	  try {
+		if (window.pywebview) {
+		  const data = await window.pywebview.api.get_transfer_data();
+		  const transitions = parseDfaTable(data);
+		  drawDfa(transitions);
+		} else {
+		  // fallback for browser testing
+		  const response = await fetch("transfer.txt");
+		  const data = await response.text();
+		  const transitions = parseDfaTable(data);
+		  drawDfa(transitions);
+		}
+	  } catch (error) {
+		console.error("Error loading DFA transition table:", error);
+	  }
+	}
+
+document.addEventListener("DOMContentLoaded", loadTransferData);
     </script>
   </body>
 </html>

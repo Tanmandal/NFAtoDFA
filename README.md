@@ -22,7 +22,7 @@ cd NFAtoDFA
 pip install -r requirements.txt
 ```
 
-For **Windows**, you can also download the `.exe` from [Releases](https://github.com/Tanmandal/NFAtoDFA/releases) and run it directly.
+For **Windows**, you can also download the `.zip` from [Releases](https://github.com/Tanmandal/NFAtoDFA/releases) and extract it and run the .exe directly.
 
 ---
 

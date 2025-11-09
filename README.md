@@ -22,6 +22,8 @@ cd NFAtoDFA
 pip install -r requirements.txt
 ```
 
+For **Windows**, you can also download the `.exe` from [Releases](https://github.com/Tanmandal/NFAtoDFA/releases) and run it directly.
+
 ---
 
 ## 🧠 Usage
@@ -37,6 +39,20 @@ Follow the CLI prompts to enter:
 * (Optional) λ-transitions
 
 Choose to visualize → opens DFA diagram window with download option.
+
+---
+
+## 🖼️ Screenshots
+
+<table>
+<tr>
+<td><img src="https://github.com/Tanmandal/ScreenShots/blob/main/NFADFA2.png" width="300"></td>
+<td><img src="https://github.com/Tanmandal/ScreenShots/blob/main/NFADFA1.png" width="300"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="https://github.com/Tanmandal/ScreenShots/blob/main/NFADFA3.png" width="500"></td>
+</tr>
+</table>
 
 ---
 

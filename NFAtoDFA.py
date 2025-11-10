@@ -176,7 +176,12 @@ console.print(Panel("[bold blue]NFA → DFA Converter with λ-NFA Support[/bold 
 
 Nsts=[]
 Nstsnm=[]
-nl=int(Prompt.ask("[yellow]Number of States in NFA Table[/yellow]"))
+while True:
+    nl=Prompt.ask("[yellow]Number of States in NFA Table[/yellow]")
+    if nl.isdigit() and nl!="0":
+        nl=int(nl)
+        break
+    console.print("[red]Number of States must be a Positive Integer. Enter again.[/red]")
 console.print("[cyan]Name NFA States:[/cyan]")
 for i in range(nl):
     while True:
@@ -215,7 +220,12 @@ while True:
         fst=[]
         console.print("[red]Invalid final states. Please re-enter.[/red]")
 
-nt=int(Prompt.ask("[yellow]Number of Transitions in NFA Table[/yellow]"))
+while True:
+    nt=Prompt.ask("[yellow]Number of Transitions in NFA Table[/yellow]")
+    if nt.isdigit() and nt!="0":
+        nt=int(nt)
+        break
+    console.print("[red]Number of Transitions must be a Positive Integer. Enter again.[/red]")
 Ntrns=[]
 console.print("[cyan]Name NFA Transitions:[/cyan]")
 for i in range(nt):
@@ -223,6 +233,8 @@ for i in range(nt):
         s=Prompt.ask(f"[{i+1}] Transition symbol")
         if s in Ntrns:
             console.print("[red]Duplicate transition. Try again.[/red]")
+        elif s=="":
+            console.print("[red]Transition needs a Symbol. Try again.[/red]")
         else:
             break
     Ntrns.append(s)
@@ -230,38 +242,50 @@ for i in range(nt):
 Ntbl=[]
 for i in range(nl):
     Ntbl.append([])
-    for j in range(nt):
+    j=0
+    while j<nt:
         s=Prompt.ask(f"ζ({Nstsnm[i]},{Ntrns[j]}) => [dim]comma separated[/dim]")
         st=StringTokenizer(s,",")
         lst=[]
+        fl=False
         while(st.hasMoreTokens()):
             ss=st.nextToken()
             if ss not in Nstsnm and len(ss)>0:
                 console.print("[red]Invalid state in transition![/red]")
                 lst=[]
+                fl=True
                 break
             else:
                 if len(ss)>0 and Nstsnm.index(ss) not in lst:
                     lst.append(Nstsnm.index(ss))
+        if fl:
+            continue
         lst.sort()
         Ntbl[i].append(lst)
+        j+=1
 
 if Confirm.ask("[magenta]Is this a λ-NFA?[/magenta]"):
     lmdtrns=[]
-    for i in range(len(Nstsnm)):
+    i=0
+    while i<len(Nstsnm):
         s=Prompt.ask(f"ζ({Nstsnm[i]},λ) => [dim]comma separated[/dim]")
         st=StringTokenizer(s,",")
         lmd=[]
+        fl=False
         while(st.hasMoreTokens()):
             ss=st.nextToken()
             if ss not in Nstsnm and len(ss)>0:
                 console.print("[red]Invalid λ transition![/red]")
                 lmd=[]
+                fl=True
                 break
             else:
                 if len(ss)>0 and Nstsnm.index(ss) not in lmd:
                     lmd.append(Nstsnm.index(ss))
+        if fl:
+            continue
         lmdtrns.append(lmd)
+        i+=1
     console.print("\n[bold yellow]λ-NFA Transition Table:[/bold yellow]")
     dispTbl(Ntrns,Nstsnm,Nsts,Ntbl,fst,lmdtrns)
     Ntbl=LNFAtoNFA(Ntbl,lmdtrns)
